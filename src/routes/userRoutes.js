@@ -13,18 +13,17 @@ console.log("userRoutes loaded");
 
 const router = express.Router();
 // Create User (admin)
-
-router.post("/users", createUser);
+router.post("/users",authenticate, createUser);
 
 
 // Simple Login 
 router.post("/login", loginUser);
 
 // Pending Commission
-router.get("/users/:userId/commission/pending", getPendingCommission);
+router.get("/users/:userId/commission/pending",authenticate, getPendingCommission);
 
 // Redeem
-router.post("/users/:userId/commission/redeem", redeemCommission);
+router.post("/users/:userId/commission/redeem",authenticate, redeemCommission);
 
 // Users Summary for Dashboard
 router.get("/users/summary",authenticate, getUsersSummary);
