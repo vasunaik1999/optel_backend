@@ -83,7 +83,7 @@ export const consumeSerial = async (req, res) => {
       where: { id: serial.id },
       data: {
         isConsumed: true,
-        consumedBy: userId,
+        consumedBy: { connect: { id: parseInt(userId) } },
         consumedAt: new Date()
       }
     });
@@ -93,7 +93,7 @@ export const consumeSerial = async (req, res) => {
 
     await prisma.commissionTransaction.create({
       data: {
-        userId,
+        userId: parseInt(userId),
         serialId: serial.id,
         commissionAmount
       }
