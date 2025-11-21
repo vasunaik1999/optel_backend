@@ -7,6 +7,7 @@ import {
   createUser,
   loginUser
 } from "../controllers/userController.js";
+import { authenticate } from '../middlewares/authMiddleware.js';
 
 console.log("userRoutes loaded");
 
@@ -16,7 +17,7 @@ const router = express.Router();
 router.post("/users", createUser);
 
 
-// Simple Login (demo)
+// Simple Login 
 router.post("/login", loginUser);
 
 // Pending Commission
@@ -26,6 +27,6 @@ router.get("/users/:userId/commission/pending", getPendingCommission);
 router.post("/users/:userId/commission/redeem", redeemCommission);
 
 // Users Summary for Dashboard
-router.get("/users/summary", getUsersSummary);
+router.get("/users/summary",authenticate, getUsersSummary);
 
 export default router;

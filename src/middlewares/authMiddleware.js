@@ -1,10 +1,18 @@
-import dotenv from "dotenv";
-dotenv.config();
+import jwt from 'jsonwebtoken'
 
-export const apiKeyAuth = (req, res, next) => {
-  const apiKey = req.headers["x-api-key"];
-  if (!apiKey || apiKey !== process.env.API_KEY) {
-    return res.status(401).json({ success: false, message: "Unauthorized" });
+const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey123'
+
+export const authenticate = (req, res, next) => {
+  const authHeader = req.headers['authorization']
+  const token = authHeader && authHeader.split(' ')[1] // "Bearer <token>"
+
+  if (!token) return res.status(401).json({ message: 'Token required' })
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET)
+    req.userId = decoded.userId
+    next()
+  } catch (err) {
+    return res.status(403).json({ message: 'Invalid or expired token' })
   }
-  next();
-};
+}

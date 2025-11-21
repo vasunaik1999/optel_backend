@@ -1,4 +1,9 @@
 import prisma from "../prisma.js";
+import bcrypt from 'bcrypt'
+import jwt from 'jsonwebtoken'
+
+const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey123'
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
 
 // ---------------------------------------------
 // Get Pending Commission
@@ -108,21 +113,43 @@ export const getUsersSummary = async (req, res) => {
 // ---------------------------------------------
 // Create User (simple)
 // ---------------------------------------------
+// ---------------------------------------------
+// Create User (with hashed password + JWT)
+// ---------------------------------------------
 export const createUser = async (req, res) => {
   try {
-    console.log("createUser hit!", req.body);
+    const { name, password } = req.body;
 
-    const { name } = req.body;
+    if (!password) {
+      return res.status(400).json({ success: false, message: "Password required" });
+    }
 
-    // Let Prisma auto-generate ID
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create user in DB
     const created = await prisma.user.create({
-      data: { name: name || null }
+      data: {
+        name,
+        password: hashedPassword,
+      },
     });
 
-    res.json({ success: true, user: created });
+    // Generate JWT
+    const token = jwt.sign(
+      { id: created.id, name: created.name },
+      process.env.JWT_SECRET || "supersecretkey",
+      { expiresIn: "7d" } // token valid for 7 days
+    );
+
+    res.json({
+      success: true,
+      user: { id: created.id, name: created.name },
+      token,
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, error: err.message });
   }
 };
 
@@ -131,14 +158,25 @@ export const createUser = async (req, res) => {
 // ---------------------------------------------
 export const loginUser = async (req, res) => {
   try {
-    const userId = parseInt(req.body.userId); // convert to int
-    if (!userId) return res.status(400).json({ success: false, message: 'userId required' });
+    const { userId, password } = req.body
+    if (!userId || !password)
+      return res.status(400).json({ success: false, message: 'User ID and password required' })
 
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    const user = await prisma.user.findUnique({ where: { id: parseInt(userId) } })
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' })
 
-    res.json({ success: true, user: { id: user.id, name: user.name } });
+    const validPassword = await bcrypt.compare(password, user.password || '')
+    if (!validPassword) return res.status(401).json({ success: false, message: 'Invalid password' })
+
+    // Generate JWT
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN })
+
+    res.json({ 
+      success: true, 
+      user: { id: user.id, name: user.name },
+      token
+    })
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message })
   }
-};
+}
