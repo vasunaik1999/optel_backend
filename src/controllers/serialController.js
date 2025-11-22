@@ -1,5 +1,8 @@
 import prisma from "../prisma.js";
 import { calculateCommission } from "../services/commissionService.js";
+import QRCode from "qrcode";
+import path from "path";
+import fs from "fs";
 
 // ---------------------------------------------
 // Add Serial Number
@@ -16,15 +19,42 @@ export const addSerialNumber = async (req, res) => {
       return res.status(400).json({ message: "Serial already exists" });
     }
 
+    // Create DB entry first
     const created = await prisma.serialNumber.create({
       data: {
         serialNumber,
-        mrp: parseFloat(mrp)
+        mrp: parseFloat(mrp),
+        qrCode: "" // update after generating file
       }
     });
 
-    res.json({ success: true, data: created });
+    // --- Generate QR and Save File ---
+    const qrFolder = path.join(process.cwd(), "uploads/qrcodes");
+    if (!fs.existsSync(qrFolder)) fs.mkdirSync(qrFolder, { recursive: true });
+
+    const filePath = path.join(qrFolder, `${serialNumber}.png`);
+
+    // QR CONTENT ONLY SERIAL NUMBER
+    const qrContent = serialNumber; 
+
+    await QRCode.toFile(filePath, qrContent);
+
+    // Update DB with QR file path
+    await prisma.serialNumber.update({
+      where: { id: created.id },
+      data: { qrCode: `/uploads/qrcodes/${serialNumber}.png` }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        ...created,
+        qrCode: `/uploads/qrcodes/${serialNumber}.png`
+      }
+    });
+
   } catch (err) {
+    console.log(err);
     res.status(500).json({ error: err.message });
   }
 };

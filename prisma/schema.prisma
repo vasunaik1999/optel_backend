@@ -24,7 +24,8 @@ model SerialNumber {
   mrp          Float
   isConsumed   Boolean   @default(false)
 
-  // Relation to User
+  qrCode       String?   // store file path
+
   consumedBy   User?     @relation("UserConsumedSerials", fields: [consumedById], references: [id])
   consumedById Int?
   consumedAt   DateTime?

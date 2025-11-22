@@ -1,5 +1,22 @@
+# Node modules
 node_modules
-# Keep environment variables out of version control
+
+# Environment variables
 .env
 
+# Prisma generated client
 /generated/prisma
+
+# Uploaded QR codes
+uploads/qrcodes/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
