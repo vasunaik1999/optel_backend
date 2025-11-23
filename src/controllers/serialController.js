@@ -11,6 +11,27 @@ export const addSerialNumber = async (req, res) => {
   try {
     const { serialNumber, mrp } = req.body;
 
+    // Basic validation
+    if (!serialNumber) {
+      return res.status(400).json({ message: "Serial number is required" });
+    }
+
+    // Must be EXACT 10 digits
+    if (!/^[A-Za-z]{3}\d{7}$/.test(serialNumber)) {
+      return res.status(400).json({
+        message: "Serial must be 3 letters followed by 7 digits (e.g., SNO0000001)"
+      });
+    }
+
+
+    // MRP validation
+    if (!mrp || isNaN(mrp) || parseFloat(mrp) <= 0) {
+      return res.status(400).json({
+        message: "MRP must be a valid positive number"
+      });
+    }
+
+    // Check duplicate
     const existing = await prisma.serialNumber.findUnique({
       where: { serialNumber }
     });
@@ -34,10 +55,7 @@ export const addSerialNumber = async (req, res) => {
 
     const filePath = path.join(qrFolder, `${serialNumber}.png`);
 
-    // QR CONTENT ONLY SERIAL NUMBER
-    const qrContent = serialNumber; 
-
-    await QRCode.toFile(filePath, qrContent);
+    await QRCode.toFile(filePath, serialNumber);
 
     // Update DB with QR file path
     await prisma.serialNumber.update({
@@ -89,6 +107,12 @@ export const checkSerialExists = async (req, res) => {
 export const consumeSerial = async (req, res) => {
   try {
     const { userId, serialNumber } = req.body;
+
+    if (!/^[A-Za-z]{3}\d{7}$/.test(serialNumber)) {
+      return res.status(400).json({
+        message: "Serial must be 3 letters followed by 7 digits (e.g., SNO0000001)"
+      });
+    }
 
     const serial = await prisma.serialNumber.findUnique({
       where: { serialNumber }
