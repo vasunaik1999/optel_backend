@@ -53,39 +53,59 @@ export const getPainterInsights = async (req, res) => {
     // Gemini Prompt
     const prompt = `
 You are an AI assistant for a paint company's painter loyalty program.
-Analyze the following painter data and generate insights.
+Analyze the painter and return INSIGHTS.
 
-Data:
+DATA:
 - Total serials consumed: ${totalBought}
-- Total commission earned: ₹${commissionEarned}
-- Total redeemed: ₹${redeemedAmount}
-- Pending commission: ₹${pendingCommission}
+- Commission earned: ${commissionEarned}
+- Commission redeemed: ${redeemedAmount}
+- Pending commission: ${pendingCommission}
 - Last purchase days ago: ${lastPurchaseDaysAgo}
 
-Return output STRICTLY in JSON with keys:
-summary
-suggestion
-nextPurchasePrediction
-motivation
-riskScore (0-100)
+Return STRICT JSON ONLY with the following fields:
 
-Make it short and helpful.
+summary                 (short insight)
+suggestion              (1 helpful suggestion)
+recommendedAction       (3-5 words, e.g. "Offer discount", "Send reminder")
+loyaltyLevel            (High / Medium / Low)
+nextPurchaseDays        (number)
+motivation              (main motivator)
+riskScore               (0-100)
+confidenceScore         (0-1)
+
+RULES:
+- NO markdown
+- NO backticks
+- NO explanation
+- ONLY valid JSON
     `;
 
-    // const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.0-flash"
+    });
 
     const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    let text = result.response.text().trim();
+
+    // Clean output (remove ``` and `json`)
+    text = text
+      .replace(/```json/gi, "")
+      .replace(/```/g, "")
+      .trim();
 
     let insights;
+
     try {
       insights = JSON.parse(text);
-    } catch {
+    } catch (err) {
+      console.warn("JSON parse failed, returning raw text");
       insights = { raw: text };
     }
 
-    res.json({ userId, insights });
+    res.json({
+      userId,
+      insights
+    });
 
   } catch (err) {
     console.error("AI Error:", err);
