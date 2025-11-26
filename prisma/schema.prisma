@@ -1,0 +1,49 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id              Int                     @id @default(autoincrement())
+  name            String?
+  email           String?                 @unique
+  password        String?                 // hashed password
+
+  consumedSerials SerialNumber[]          @relation("UserConsumedSerials")
+  commissions     CommissionTransaction[]
+  redemptions     CommissionRedemption[]
+}
+
+model SerialNumber {
+  id           Int       @id @default(autoincrement())
+  serialNumber String    @unique
+  mrp          Float
+  isConsumed   Boolean   @default(false)
+
+  qrCode       String?   // store file path
+
+  consumedBy   User?     @relation("UserConsumedSerials", fields: [consumedById], references: [id])
+  consumedById Int?
+  consumedAt   DateTime?
+}
+
+model CommissionTransaction {
+  id               Int      @id @default(autoincrement())
+  userId           Int
+  user             User     @relation(fields: [userId], references: [id])
+  serialId         Int
+  commissionAmount Float
+  createdAt        DateTime @default(now())
+}
+
+model CommissionRedemption {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  amount    Float
+  createdAt DateTime @default(now())
+}
